@@ -1,8 +1,8 @@
 import numpy as np
-from numpy.linalg import solve, lstsq
+from numpy.linalg import solve
 import matplotlib.pyplot as plt
 
-N = 35
+N = 30
 
 vRange = np.array((3 + N) * [False] + (N * [True] +
                                        2 * [False]) * (N - 1) + (N + 1) * [False])
@@ -14,12 +14,12 @@ pRange = np.array((3 + N - 2) * [False] + ((N - 2) *
 Xp = np.linspace(1 / (2 * N), 1 - 1 / (2 * N), N)
 X = np.append(np.append(0, Xp), 1)
 
-H = 3
+H = 10
 
 Yp = np.linspace(H / (2 * N), H - H / (2 * N), N)
 Y = np.append(np.append(0, Yp), H)
 
-WD = 0.95
+WD = 0.3
 
 Rf = np.linspace(0, 1, N + 1)
 Zf = np.linspace(0, H, N + 1)
@@ -38,9 +38,9 @@ AzP = Az[range(1, N), :]
 Vz = AzP * H / N
 Vz = Vz.flatten()
 
-nIterations = 300
+nIterations = 200
 
-reynolds = 15
+reynolds = 5
 
 pRelax = 0.5
 uRelax = 0.5
@@ -93,7 +93,7 @@ def uSolve(uFace, vFace, p):
             wBC[2] = uBC[2]
         if i + 1 > (N - 1) * (N - 1):
             wall = False
-            if radius < WD:
+            if radius > WD:
                 wBC[3] = uBC[3]
                 wall = True
         a = upwindScheme(F, D)
@@ -102,8 +102,7 @@ def uSolve(uFace, vFace, p):
         if i + 1 <= N - 1:
             aW = [0, 0, 0, -1]
             ap = 1
-        if i + 1 > (N - 1) * (N - 1):
-            if not wall:
+        if i + 1 > (N - 1) * (N - 1) and not wall:
                 aW = [-1, 0, 0, 0]
                 ap = 1
         A[i, i + 1 + 2 * l] = aW[0]
@@ -119,7 +118,12 @@ def uSolve(uFace, vFace, p):
     BU = BU + (np.diff(p, axis=1) * ArP).flatten() - \
         (1 - uRelax) * (ApU * uFace).flatten()
     for i in range(N * (N - 1)):
-        if i + 1 <= N - 1 and not wall:
+        l = i // (N - 1)
+        radius = Rf[i % (l+1) + 1]
+        wall = False
+        if radius > WD:
+            wall = True
+        if i + 1 <= N - 1:
             BU[i] = 0
         if i + 1 > (N - 1) * (N - 1) and not wall:
             BU[i] = 0
@@ -146,7 +150,7 @@ def vSolve(uFace, vFace, p):
             wBC[2] = vBC[2]
         if (i + 1) > (N - 2) * N:
             wall = False
-            if radius < WD:
+            if radius > WD:
                 wBC[3] = uBC[3]
                 wall = True
         a = upwindScheme(F, D)
@@ -158,8 +162,7 @@ def vSolve(uFace, vFace, p):
         if i % N == 0:
             aW = [0, 0, -1, 0]
             ap = 1
-        if (i + 1) > (N - 2) * N:
-            if not wall:
+        if (i + 1) > (N - 2) * N and not wall:
                 aW = [-1, 0, 0, 0]
                 ap = 1
         A[i, i + 1 + 2 * l] = aW[0]
@@ -175,9 +178,14 @@ def vSolve(uFace, vFace, p):
     BV = BV - Vz + (np.diff(p, axis=0) * AzP).flatten() - \
         (1 - vRelax) * (ApV * vFace).flatten()
     for i in range(N * (N - 1)):
-        if i + 1 <= N and not wall:
+        l = i // N
+        radius = Rf[i % (l+1) + 1]
+        wall = False
+        if radius > WD:
+            wall = True
+        if i + 1 <= N:
             BV[i] = 0
-        if i % N == 0 and not wall:
+        if i % N == 0:
             BV[i] = 0
         if (i + 1) > (N - 2) * N and not wall:
             BV[i] = 0
@@ -209,7 +217,7 @@ def pSolve(apU, apV, uFace, vFace):
             a = [0, -1, 0, 0]
         if (i + 1) > (N - 2) * (N - 3):
             wall = False
-            if radius < WD:
+            if radius > WD:
                 a[3] = 0
                 wall = True
             else:
@@ -227,9 +235,9 @@ def pSolve(apU, apV, uFace, vFace):
     dV = np.diff(vFaceStripped, axis=0).flatten()
     BP = BP + dU + dV
     for i in range((N - 2)**2):
-        if i % (N - 2) == 0 and not wall:
+        if i % (N - 2) == 0:
             BP[i] = 0
-        if (i + 1) % (N - 2) == 0 and not wall:
+        if (i + 1) % (N - 2) == 0:
             BP[i] = 0
     P = solve(AP, BP)
     P = np.reshape(P, (-1, N - 2))
@@ -237,8 +245,8 @@ def pSolve(apU, apV, uFace, vFace):
     P = np.hstack((P[:, 0].reshape(-1, 1), P, P[:, -1].reshape(-1, 1)))
     for i in range(P.shape[1]):
         radius = Rfp[i]
-        if radius < WD:
-            P[i,-1] = P[i,-2]
+        if radius > WD:
+            P[-1,i] = P[-2,i]
     P[0, 0] = (P[0, 1] + P[1, 0]) / 2
     P[-1, 0] = (P[-2, 0] + P[-1, 1]) / 2
     P[0, -1] = (P[1, -1] + P[0, -2]) / 2
