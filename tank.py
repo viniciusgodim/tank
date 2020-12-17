@@ -2,7 +2,7 @@ import numpy as np
 from numpy.linalg import solve
 import matplotlib.pyplot as plt
 
-N = 30
+N = 25
 
 vRange = np.array((3 + N) * [False] + (N * [True] +
                                        2 * [False]) * (N - 1) + (N + 1) * [False])
@@ -14,12 +14,12 @@ pRange = np.array((3 + N - 2) * [False] + ((N - 2) *
 Xp = np.linspace(1 / (2 * N), 1 - 1 / (2 * N), N)
 X = np.append(np.append(0, Xp), 1)
 
-H = 10
+H = 2
 
 Yp = np.linspace(H / (2 * N), H - H / (2 * N), N)
 Y = np.append(np.append(0, Yp), H)
 
-WD = 0.3
+WD = 0.25
 
 Rf = np.linspace(0, 1, N + 1)
 Zf = np.linspace(0, H, N + 1)
@@ -38,9 +38,9 @@ AzP = Az[range(1, N), :]
 Vz = AzP * H / N
 Vz = Vz.flatten()
 
-nIterations = 200
+nIterations = 300
 
-reynolds = 5
+reynolds = 1
 
 pRelax = 0.5
 uRelax = 0.5
@@ -96,7 +96,7 @@ def uSolve(uFace, vFace, p):
             if radius > WD:
                 wBC[3] = uBC[3]
                 wall = True
-        a = upwindScheme(F, D)
+        a = hybridScheme(F, D)
         ap = -(sum(a) - sum(F)) / uRelax
         aW = wBC * a
         if i + 1 <= N - 1:
@@ -153,7 +153,7 @@ def vSolve(uFace, vFace, p):
             if radius > WD:
                 wBC[3] = uBC[3]
                 wall = True
-        a = upwindScheme(F, D)
+        a = hybridScheme(F, D)
         ap = -(sum(a) - sum(F)) / vRelax
         aW = wBC * a
         if i + 1 <= N:
