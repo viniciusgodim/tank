@@ -14,15 +14,14 @@ pRange = np.array((3 + N - 2) * [False] + ((N - 2) *
 Xp = np.linspace(1 / (2 * N), 1 - 1 / (2 * N), N)
 X = np.append(np.append(0, Xp), 1)
 
-H = 2
+H = 1.5
 
-Yp = np.linspace(H / (2 * N), H - H / (2 * N), N)
-Y = np.append(np.append(0, Yp), H)
+Yp = np.linspace(H - H / (2 * N), H / (2 * N), N)
+Y = np.append(np.append(H, Yp), 0)
 
 WD = 0.25
 
 Rf = np.linspace(0, 1, N + 1)
-Zf = np.linspace(0, H, N + 1)
 
 Ar = 2 * Rf * H / N
 Ar = np.tile(Ar, (N, 1))
@@ -96,7 +95,7 @@ def uSolve(uFace, vFace, p):
             if radius > WD:
                 wBC[3] = uBC[3]
                 wall = True
-        a = hybridScheme(F, D)
+        a = upwindScheme(F, D)
         ap = -(sum(a) - sum(F)) / uRelax
         aW = wBC * a
         if i + 1 <= N - 1:
@@ -153,7 +152,7 @@ def vSolve(uFace, vFace, p):
             if radius > WD:
                 wBC[3] = uBC[3]
                 wall = True
-        a = hybridScheme(F, D)
+        a = upwindScheme(F, D)
         ap = -(sum(a) - sum(F)) / vRelax
         aW = wBC * a
         if i + 1 <= N:
@@ -175,7 +174,7 @@ def vSolve(uFace, vFace, p):
     BV = -np.sum(BV, axis=1)
     ApV = -np.diagonal(AV)
     ApV = np.reshape(ApV, (-1, N))
-    BV = BV - Vz + (np.diff(p, axis=0) * AzP).flatten() - \
+    BV = BV + Vz + (np.diff(p, axis=0) * AzP).flatten() - \
         (1 - vRelax) * (ApV * vFace).flatten()
     for i in range(N * (N - 1)):
         l = i // N
@@ -277,7 +276,14 @@ Uplot = np.vstack(([Uplot[0,:]], Uplot, [Uplot[-1,:]]))
 Vplot = np.vstack(([Vface[0,:]], Vface, vBCArray[3]))
 Vplot = np.apply_along_axis(movingAverage, 0, Vplot)
 Vplot = np.vstack(([Vplot[0,:]], Vplot, [Vplot[-1,:]]))
-Vplot = np.hstack((vBCArray[1], Vplot, vBCArray[2]))
+Vplot = np.hstack(([[i] for i in Vplot[:,0]], Vplot, vBCArray[2]))
+
+Uplot = np.hstack((np.fliplr(Uplot)[:,:-1],Uplot))
+Vplot = np.hstack((np.fliplr(Vplot)[:,:-1],Vplot))
+
+Xflip = -np.flip(X)[:-1]
+X = np.append(Xflip,X)
+
 fig, ax = plt.subplots()
 ax.quiver(X, Y, Uplot, Vplot)
 plt.show()
