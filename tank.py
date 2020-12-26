@@ -2,11 +2,11 @@ import numpy as np
 from numpy.linalg import solve
 import matplotlib.pyplot as plt
 
-N = 20
-H = 1.75
-reynolds = 0.5e-2
-WD = 0.75
-nIterations = 300
+N = 25
+H = 2
+reynolds = 1e-3
+WD = 0.25
+nIterations = 500
 pRelax = 0.3
 uRelax = 0.3
 vRelax = 0.3
@@ -297,20 +297,20 @@ Uplot = np.apply_along_axis(movingAverage, 1, Uplot)
 Uplot = np.hstack((uBCArray[1], Uplot, uBCArray[2]))
 Uplot = np.vstack(([Uplot[0, :]], Uplot, [Uplot[-1, :]]))
 
-for i in range(Uplot.shape[1] - 1):
-    radius = Rfp[i - 1]
+for i in range(Uplot.shape[1] - 2):
+    radius = Rfp[i]
     if radius > WD:
-        Uplot[-1, i - 1] = uBC[3]
+        Uplot[-1, i + 1] = uBC[3]
 
 Vplot = np.vstack(([Vface[0, :]], Vface, vBCArray[3]))
 Vplot = np.apply_along_axis(movingAverage, 0, Vplot)
 Vplot = np.vstack(([Vplot[0, :]], Vplot, [Vplot[-1, :]]))
 Vplot = np.hstack(([[i] for i in Vplot[:, 0]], Vplot, vBCArray[2]))
 
-for i in range(Vplot.shape[1] - 1):
-    radius = Rfp[i - 1]
+for i in range(Vplot.shape[1]-2):
+    radius = Rfp[i]
     if radius > WD:
-        Vplot[-1, i - 1] = vBC[3]
+        Vplot[-1, i + 1] = vBC[3]
 
 Uplot = np.hstack((np.fliplr(Uplot)[:, :-1], -Uplot))
 Vplot = np.hstack((np.fliplr(Vplot)[:, :-1], Vplot))
@@ -321,6 +321,10 @@ X = np.append(Xflip, X)
 fig, ax = plt.subplots()
 ax.quiver(X, Y, Uplot, Vplot)
 plt.show()
+
+Xpflip = -np.flip(Xp)[:-1]
+Xp = np.append(Xpflip, Xp)
+P = np.hstack((np.fliplr(P)[:, :-1], P))
 
 XP, YP = np.meshgrid(Xp, Yp)
 fig = plt.figure()
